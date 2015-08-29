@@ -9,11 +9,12 @@ import re
 from spider_news_all.items import SpiderNewsAllItem
 
 
-class ZqsbwSpider(scrapy.Spider):
-    name = "zqsbw"
-    allowed_domains = ["news.stcn.com"]
+class HejjwSpider(scrapy.Spider):
+    name = "hejjw"
+    allowed_domains = ["wallstreetcn.com"]
     start_urls = (
-        'http://news.stcn.com/xwyw/',
+        'http://wallstreetcn.com/news?status=published&type=news&cid=17&order=-created_at&limit=100&page=1',
+        'http://wallstreetcn.com/news?status=published&type=news&cid=22&order=-created_at&limit=100&page=1',
     )
     handle_httpstatus_list = [521]
 
@@ -58,7 +59,7 @@ class ZqsbwSpider(scrapy.Spider):
         # except:
         #     log.msg("News " + title + " dont has keywords!", level=log.INFO)
         try:
-            article = soup.find(class_='txt_con').text.strip()
+            article = soup.find(class_='article-content').text.strip()
         except:
             log.msg("News " + title + " dont has article!", level=log.INFO)
         item['title'] = title
@@ -67,11 +68,16 @@ class ZqsbwSpider(scrapy.Spider):
         item['url'] = url
         item['keywords'] = keywords
         item['article'] = article
-        item['site'] = u'证券时报网'
+        item['site'] = u'华尔街见闻'
         return item
 
     def get_type_from_url(self, url):
-        return u'新闻.要闻'
+        if 'cid=17' in url:
+            return u'新闻咨询.中国'
+        elif 'cid=22' in url:
+            return u'新闻咨询.公司'
+        else:
+            return ''
 
     def parse(self, response):
         log.msg("Start to parse page " + response.url, level=log.INFO)
@@ -81,8 +87,8 @@ class ZqsbwSpider(scrapy.Spider):
         try:
             response = response.body
             soup = BeautifulSoup(response)
-            lists = soup.find(class_='mainlist')
-            links = lists.find_all('li')
+            lists = soup.find(class_='news-list with-img')
+            links = lists.find_all('li', class_='news')
         except:
             items.append(self.make_requests_from_url(url))
             log.msg("Page " + url + " parse ERROR, try again !", level=log.ERROR)
@@ -90,15 +96,16 @@ class ZqsbwSpider(scrapy.Spider):
         need_parse_next_page = True
         if len(links) > 0:
             for i in range(0, len(links)):
-                url_news = links[i].a['href']
-                day = links[i].span.text.strip()
-                title = links[i].a.text.strip()
+                url_news = links[i].div.a['href']
+                day = links[i].find(class_='meta time visible-lg-inline-block').text.strip()
+                title = links[i].div.a.text.strip()
                 need_parse_next_page = self.is_news_not_saved(title, url_news)
                 if not need_parse_next_page:
                     break
                 items.append(self.make_requests_from_url(url_news).replace(callback=self.parse_news, meta={'_type': _type, 'day': day, 'title': title}))
-            if (soup.find('a', text=u'下一页')['href'].startswith('http://')):
-                page_next = soup.find('a', text=u'下一页')['href']
+            if len(soup.find_all(class_='fa fa-angle-right')) > 0 :
+                navi = soup.find(class_='pagination').find_all('li')
+                page_next = navi[len(navi) - 2].a['href']
                 if need_parse_next_page:
                     items.append(self.make_requests_from_url(page_next))
             return items

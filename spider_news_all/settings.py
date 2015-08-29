@@ -22,5 +22,4 @@ LOG_LEVEL = 'INFO'
 #USER_AGENT = 'spider_news_finance (+http://www.yourdomain.com)'
 USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.9; rv:24.0) Gecko/20100101 Firefox/24.0"
 CONCURRENT_REQUESTS_PER_DOMAIN = 4
-# DOWNLOAD_DELAY = 1
 COOKIES_ENABLED = False

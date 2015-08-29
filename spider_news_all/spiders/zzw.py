@@ -9,13 +9,15 @@ import re
 from spider_news_all.items import SpiderNewsAllItem
 
 
-class ZqsbwSpider(scrapy.Spider):
-    name = "zqsbw"
-    allowed_domains = ["news.stcn.com"]
+class ZzwSpider(scrapy.Spider):
+    name = "zzw"
+    allowed_domains = ["cs.com.cn"]
     start_urls = (
-        'http://news.stcn.com/xwyw/',
+        'http://www.cs.com.cn/xwzx/hg/index.html',
+        # 'http://www.cs.com.cn/xwzx/cj/index.html',
+        # 'http://www.cs.com.cn/ssgs/gsxw/index.html',
     )
-    handle_httpstatus_list = [521]
+    handle_httpstatus_list = [404]
 
     FLAG_INTERRUPT = False
     SELECT_NEWS_BY_TITLE_AND_URL = "SELECT * FROM news_all WHERE title='%s' AND url='%s'"
@@ -27,6 +29,11 @@ class ZqsbwSpider(scrapy.Spider):
     cursor.execute('SET NAMES utf8;')
     cursor.execute('SET CHARACTER SET utf8;')
     cursor.execute('SET character_set_connection=utf8;')
+
+    URL_TEMPLATE = 'http://www.cs.com.cn/xwzx/hg/index_%s.html'
+    # URL_TEMPLATE = 'http://www.cs.com.cn/xwzx/cj/index_%s.html'
+    # URL_TEMPLATE = 'http://www.cs.com.cn/ssgs/gsxw/index_%s.html'
+    index = 0
 
     def is_news_not_saved(self, title, url):
         if self.FLAG_INTERRUPT:
@@ -58,7 +65,7 @@ class ZqsbwSpider(scrapy.Spider):
         # except:
         #     log.msg("News " + title + " dont has keywords!", level=log.INFO)
         try:
-            article = soup.find(class_='txt_con').text.strip()
+            article = soup.find(class_='Dtext z_content').text.strip()
         except:
             log.msg("News " + title + " dont has article!", level=log.INFO)
         item['title'] = title
@@ -67,21 +74,32 @@ class ZqsbwSpider(scrapy.Spider):
         item['url'] = url
         item['keywords'] = keywords
         item['article'] = article
-        item['site'] = u'证券时报网'
+        item['site'] = u'中证网'
         return item
 
     def get_type_from_url(self, url):
-        return u'新闻.要闻'
+        if 'hg' in url:
+            return u'新闻.宏观'
+        elif 'cj' in url:
+            return u'新闻.产经'
+        elif 'gongsi' in url:
+            return u'上市公司'
+        elif 'gsxw' in url:
+            return u'公司.公司新闻'
+        else:
+            return ''
 
     def parse(self, response):
+        self.index = self.index + 1
         log.msg("Start to parse page " + response.url, level=log.INFO)
         url = response.url
+        url_base = url.split('/index')[0]
         _type = self.get_type_from_url(url)
         items = []
         try:
             response = response.body
             soup = BeautifulSoup(response)
-            lists = soup.find(class_='mainlist')
+            lists = soup.find(class_='column-box')
             links = lists.find_all('li')
         except:
             items.append(self.make_requests_from_url(url))
@@ -90,15 +108,20 @@ class ZqsbwSpider(scrapy.Spider):
         need_parse_next_page = True
         if len(links) > 0:
             for i in range(0, len(links)):
-                url_news = links[i].a['href']
+                try:
+                    if links[i]['class'] == ['nobg']:
+                        continue
+                except:
+                    log.msg("Start to parse page ", level=log.INFO)
+                url_news = url_base + links[i].a['href'][1:]
                 day = links[i].span.text.strip()
                 title = links[i].a.text.strip()
                 need_parse_next_page = self.is_news_not_saved(title, url_news)
                 if not need_parse_next_page:
                     break
                 items.append(self.make_requests_from_url(url_news).replace(callback=self.parse_news, meta={'_type': _type, 'day': day, 'title': title}))
-            if (soup.find('a', text=u'下一页')['href'].startswith('http://')):
-                page_next = soup.find('a', text=u'下一页')['href']
+            if (self.index != 10):
+                page_next = self.URL_TEMPLATE % (self.index)
                 if need_parse_next_page:
                     items.append(self.make_requests_from_url(page_next))
             return items

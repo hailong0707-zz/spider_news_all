@@ -54,5 +54,15 @@ http://industry.caijing.com.cn/industrys/
 - 证券时报网
 http://news.stcn.com/xwyw/
 ‘scrapy crawl zqsbw’
+- 中证网
+http://www.cs.com.cn/xwzx/hg/
+http://www.cs.com.cn/xwzx/cj/ 
+http://www.cs.com.cn/ssgs/gsxw/
+三个分类必须分开运行
+‘scrapy crawl zzw’
+- 华尔街见闻
+http://wallstreetcn.com/news?status=published&type=news&cid=17&order=-created_at&limit=100&page=1
+http://wallstreetcn.com/news?status=published&type=news&cid=22&order=-created_at&limit=100&page=1
+`scrapy crawl hejjw`
 
 - 如果有问题，可以发邮件沟通`hailong0707@gmail.com`
