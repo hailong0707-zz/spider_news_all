@@ -12,4 +12,4 @@ CREATE TABLE news_all(
 	type VARCHAR(255),
 	url VARCHAR(255) NOT NULL,
 	article TEXT
-);
+) DEFAULT CHARSET=UTF8;
